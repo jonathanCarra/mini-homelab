@@ -1,0 +1,27 @@
+---
+- name: Ensure systemd-resolved is started and enabled
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: started
+    enabled: true
+
+- name: Update apt cache
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: dist
+    cache_valid_time: 3600
+
+- name: Install Dependencies
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - gnupg
+    - software-properties-common
+
+
