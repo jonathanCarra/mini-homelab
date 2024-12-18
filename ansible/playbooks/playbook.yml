@@ -10,5 +10,4 @@
     - docker_install
     - portainer_deploy
     - qbittorrent_deploy
-    # Pi-hole needs to be the last role, as it will replace systemd-resolved
-    - pihole_deploy
+    - jellyfin_deploy

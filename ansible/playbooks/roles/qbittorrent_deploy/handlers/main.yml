@@ -1,0 +1,17 @@
+---
+
+- name: Start qbittorrent
+  community.docker.docker_compose_v2:
+    project_src: /home/{{ ansible_user }}/docker-compose/qbittorrent
+    state: present
+    recreate: auto
+
+- name: Restart qbittorrent
+  community.docker.docker_compose_v2:
+    project_src: /home/{{ ansible_user }}/docker-compose/qbittorrent
+    state: restarted
+    
+- name: Password set # create a file to indicate that the password has been set
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/docker-compose/qbittorrent/.password_set
+    state: touch

@@ -1,0 +1,55 @@
+---
+- name: qBittorrent Deployment
+  tags: qbittorrent
+  block:
+    - name: Create qbittorent directory
+      ansible.builtin.file:
+        path: /home/{{ ansible_user }}/docker-compose/qbittorrent
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Deploy qbittorent compose Template
+      ansible.builtin.template:
+        src: templates/compose.yml.j2
+        dest: /home/{{ ansible_user }}/docker-compose/qbittorrent/docker-compose.yml
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      notify: 
+        - Start qbittorrent
+
+    - name: Deploy qbittorent using Docker-compose
+      community.docker.docker_compose_v2:
+        project_src: /home/{{ ansible_user }}/docker-compose/qbittorrent
+        state: present
+        recreate: auto
+
+    - name: Check if file .password_set exists
+      ansible.builtin.stat:
+        path: /home/{{ ansible_user }}/docker-compose/qbittorrent/.password_set
+      register: password_set
+
+    - name: Set the variable if the password has been set
+      ansible.builtin.set_fact:
+        qbittorrent_password_set: true
+      when: password_set.stat.exists
+
+    # Container needs to be stopped before changing the password as it writes files on shutdown
+    - name: Stop the qBittorrent container
+      community.docker.docker_compose_v2:
+        project_src: /home/{{ ansible_user }}/docker-compose/qbittorrent
+        state: stopped
+      when: qbittorrent_password_set is not defined
+
+    - name: Replace the randomly generated password # default is set to 'adminadmin' generate your hash using the qbittorrent_hash.py script in /utils/qbittorrent/qbittorrent_hash.py
+      ansible.builtin.lineinfile:
+        path: /home/{{ ansible_user }}/docker-compose/qbittorrent/qbittorrent/appdata/qBittorrent/qBittorrent.conf
+        state: present
+        line: "{{ qbittorent_password_hash }}"
+        create: yes
+      when: qbittorrent_password_set is not defined
+      notify: 
+        - Password set
+        - Start qbittorrent

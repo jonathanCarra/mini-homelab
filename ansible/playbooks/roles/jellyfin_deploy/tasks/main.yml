@@ -1,0 +1,27 @@
+---
+- name: Jellyfin Deployment
+  tags: jellyfin
+  block:
+    - name: Create Jellyfin directory
+      ansible.builtin.file:
+        path: /home/{{ ansible_user }}/docker-compose/jellyfin
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Deploy Jellyfin compose Template
+      ansible.builtin.template:
+        src: templates/compose.yml.j2
+        dest: /home/{{ ansible_user }}/docker-compose/jellyfin/docker-compose.yml
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      notify: 
+        - Start jellyfin
+
+    - name: Deploy Jellyfin using Docker-compose
+      community.docker.docker_compose_v2:
+        project_src: /home/{{ ansible_user }}/docker-compose/jellyfin
+        state: present
+        recreate: auto
