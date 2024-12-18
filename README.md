@@ -57,9 +57,9 @@ ansible-playbook playbooks/playbook.yml
 
 Si tout s'est bien déroulé, vous devriez pouvoir accéder à vos différentes applications
 
-Portainer : `http://votre-ip-du-serveur:9000`
-qBittorrent : `http://votre-ip-du-serveur:8082`
-Jellyfin : `http://votre-ip-du-serveur:8096`
+Portainer : `http://votre-ip-du-serveur:9000` \
+qBittorrent : `http://votre-ip-du-serveur:8082` \
+Jellyfin : `http://votre-ip-du-serveur:8096` \
 
 Vous pouvez également vérifier le fonctionnement de docker directement sur votre machine serveur :
 
