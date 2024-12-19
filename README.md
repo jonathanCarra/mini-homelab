@@ -9,7 +9,7 @@ Le déploiement inclus actuellement :
 Le projet peut fonctionner sur un Raspberry Pi, sur une VM, ou même en local.
 Le projet est compatible amd64 et arm64
 
-![Alt homelab](https://ibb.co/YhZRN70 "homelab")
+![Alt homelab](https://i.ibb.co/Rcyvgpj/img-homelab.jpg "homelab")
 
 ## Requirements
 
