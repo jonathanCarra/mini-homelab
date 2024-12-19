@@ -9,6 +9,8 @@ Le déploiement inclus actuellement :
 Le projet peut fonctionner sur un Raspberry Pi, sur une VM, ou même en local.
 Le projet est compatible amd64 et arm64
 
+![Alt homelab](https://ibb.co/YhZRN70 "homelab")
+
 ## Requirements
 
 - Un serveur avec Ubuntu server 24.04 installé (https://ubuntu.com/download/server). 
