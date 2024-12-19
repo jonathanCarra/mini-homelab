@@ -47,7 +47,7 @@
       ansible.builtin.lineinfile:
         path: /home/{{ ansible_user }}/docker-compose/qbittorrent/qbittorrent/appdata/qBittorrent/qBittorrent.conf
         state: present
-        line: "{{ qbittorent_password_hash }}"
+        line: "{{ qbittorrent_password_hash }}"
         create: yes
       when: qbittorrent_password_set is not defined
       notify: 
