@@ -1,5 +1,0 @@
-# .ansible-lint
-
-# Skip the line-length rule
-skip_list:
-  - 'ANSIBLE0011'  # Rule 303: line-length
