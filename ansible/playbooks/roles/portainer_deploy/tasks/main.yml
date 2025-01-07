@@ -26,10 +26,10 @@
     mode: '0755'
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
-  notify: 
+  notify:
     - Start Portainer
 
-- name: Run Portainer Docker compose up 
+- name: Run Portainer Docker compose up
   community.docker.docker_compose_v2:
     project_src: /home/{{ ansible_user }}/docker-compose/portainer
     state: present

@@ -1,5 +1,5 @@
 ---
-- name: qBittorrent Deployment
+- name: QBittorrent Deployment
   tags: qbittorrent
   block:
     - name: Create qbittorent directory
@@ -17,7 +17,7 @@
         mode: '0755'
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-      notify: 
+      notify:
         - Start qbittorrent
 
     - name: Deploy qbittorent using Docker-compose
@@ -43,13 +43,17 @@
         state: stopped
       when: qbittorrent_password_set is not defined
 
-    - name: Replace the randomly generated password # default is set to 'adminadmin' generate your hash using the qbittorrent_hash.py script in /utils/qbittorrent/qbittorrent_hash.py
+    # default is set to 'adminadmin' generate your hash using the qbittorrent_hash.py script in /utils/qbittorrent/qbittorrent_hash.py
+    - name: Replace the randomly generated password
       ansible.builtin.lineinfile:
         path: /home/{{ ansible_user }}/docker-compose/qbittorrent/qbittorrent/appdata/qBittorrent/qBittorrent.conf
         state: present
-        line: "{{ qbittorrent_password_hash }}"
-        create: yes
+        line: "{{ qbittorrent_deploy_password_hash }}"
+        create: true
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
       when: qbittorrent_password_set is not defined
-      notify: 
+      notify:
         - Password set
         - Start qbittorrent
