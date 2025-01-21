@@ -1,0 +1,116 @@
+services:
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./certbot/www/:/var/www/certbot/:rw
+      - ./certbot/conf/:/etc/letsencrypt/:rw
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    depends_on:
+      certbot:
+        condition: service_started
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - JELLYFIN_PublishedServerUrl=http://192.168.1.138 #optional
+    volumes:
+      - ./Jellyfin/config:/config
+      - ./Jellyfin/cache:/cache
+      - ./Jellyfin/data:/data
+    ports:
+      - 8096:8096
+      - 8920:8920
+    restart: unless-stopped
+    networks:
+      - jellyfin-network
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    depends_on:
+      jellyfin:
+        condition: service_started
+    volumes:
+      - ./uptime-kuma-data:/app/data
+    ports:
+      - 3001:3001  # <Host Port>:<Container Port>
+    restart: unless-stopped
+    networks:
+      - jellyfin-network
+
+  netdata:
+    image: netdata/netdata
+    container_name: netdata
+    pid: host
+    network_mode: host
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    ports:
+      - 19999:19999
+    volumes:
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /:/host/root:ro,rslave
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/log:/host/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - jellyfin-network
+
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      # DOMAIN: "https://vaultwarden.example.com"  # required when using a reverse proxy; your domain; vaultwarden needs to know it's https to work properly with attachments
+      SIGNUPS_ALLOWED: "true"
+    volumes:
+      - ./vw-data/:/data/
+    ports:
+      - 8080:80
+    networks:
+      - vault-network
+
+  reverseproxy:
+    image: nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/local.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/www:/var/www/certbot/:ro
+      - ./certbot/conf/:/etc/nginx/ssl/:ro
+    restart: unless-stopped
+    depends_on:
+      jellyfin:
+        condition: service_started
+      netdata:
+        condition: service_started
+      vaultwarden:
+        condition: service_started
+      uptime-kuma:
+        condition: service_started
+    networks:
+      - jellyfin-network
+      - vault-network
+
+volumes:
+  netdataconfig:
+  netdatalib:
+  netdatacache:
+networks:
+  jellyfin-network:
+  vault-network:

@@ -18,8 +18,9 @@
     name: "{{ item }}"
     state: present
   loop:
-    - apt-transport-https
-    - ca-certificates
     - curl
-    - gnupg
-    - software-properties-common
+
+- name: Send utils directory
+  ansible.builtin.copy:
+    dest: /home/{{ ansible_user }}/
+    src: 
