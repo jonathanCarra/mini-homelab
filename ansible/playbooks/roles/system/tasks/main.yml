@@ -23,4 +23,4 @@
 - name: Send utils directory
   ansible.builtin.copy:
     dest: /home/{{ ansible_user }}/
-    src: 
+    src: ./utils/
