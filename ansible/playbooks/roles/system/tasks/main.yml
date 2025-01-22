@@ -26,6 +26,11 @@
     dest: /home/{{ ansible_user }}/
     src: ./utils/
 
+- name: Change autorun permissions
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/autorun.sh
+    mode: '0755'
+
 - name: Add hostname in local.conf
   ansible.builtin.replace:
     path: /home/{{ ansible_user }}/nginx/local.conf
