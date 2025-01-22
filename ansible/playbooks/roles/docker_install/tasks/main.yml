@@ -62,3 +62,23 @@
       ansible.builtin.package:
         name: docker-compose
         state: present
+
+    - name: Stop all services
+      community.docker.docker_compose_v2:
+        project_src: "/home/{{ ansible_user }}/"
+        state: stopped
+      register: output
+
+    - name: Kill process with needed port
+      ansible.builtin.shell:
+        cmd: "kill $(lsof -t -i:{{ item }})"
+      loop:
+        - 80
+        - 443
+        - 8080
+      ignore_errors: true
+
+    - name: Create and start services
+      community.docker.docker_compose_v2:
+        project_src: "/home/{{ ansible_user }}/"
+      register: output

@@ -1,15 +1,6 @@
 services:
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - ./certbot/www/:/var/www/certbot/:rw
-      - ./certbot/conf/:/etc/letsencrypt/:rw
-
   jellyfin:
     image: lscr.io/linuxserver/jellyfin:latest
-    depends_on:
-      certbot:
-        condition: service_started
     container_name: jellyfin
     environment:
       - PUID=1000
@@ -20,23 +11,9 @@ services:
       - ./Jellyfin/config:/config
       - ./Jellyfin/cache:/cache
       - ./Jellyfin/data:/data
-    ports:
-      - 8096:8096
-      - 8920:8920
-    restart: unless-stopped
-    networks:
-      - jellyfin-network
-
-  uptime-kuma:
-    image: louislam/uptime-kuma:1
-    container_name: uptime-kuma
-    depends_on:
-      jellyfin:
-        condition: service_started
-    volumes:
-      - ./uptime-kuma-data:/app/data
-    ports:
-      - 3001:3001  # <Host Port>:<Container Port>
+    # ports:
+    #   - 8096:8096
+    #   - 8920:8920
     restart: unless-stopped
     networks:
       - jellyfin-network
@@ -45,15 +22,14 @@ services:
     image: netdata/netdata
     container_name: netdata
     pid: host
-    network_mode: host
     restart: unless-stopped
     cap_add:
       - SYS_PTRACE
       - SYS_ADMIN
     security_opt:
       - apparmor:unconfined
-    ports:
-      - 19999:19999
+    # ports:
+    #   - 19999:19999
     volumes:
       - netdataconfig:/etc/netdata
       - netdatalib:/var/lib/netdata
@@ -70,11 +46,12 @@ services:
     networks:
       - jellyfin-network
 
-  vaultwarden:
+  vault:
     image: vaultwarden/server:latest
     container_name: vaultwarden
     restart: unless-stopped
     environment:
+      DOMAIN: "https://HOST_ANSIBLE/vault/"
       # DOMAIN: "https://vaultwarden.example.com"  # required when using a reverse proxy; your domain; vaultwarden needs to know it's https to work properly with attachments
       SIGNUPS_ALLOWED: "true"
     volumes:
@@ -84,25 +61,23 @@ services:
     networks:
       - vault-network
 
-  reverseproxy:
+  nginx:
     image: nginx
-    ports:
-      - 80:80
-      - 443:443
+    container_name: nginx
     volumes:
       - ./nginx/local.conf:/etc/nginx/nginx.conf:ro
-      - ./certbot/www:/var/www/certbot/:ro
-      - ./certbot/conf/:/etc/nginx/ssl/:ro
+      - ./cert/:/etc/nginx/ssl/:ro
     restart: unless-stopped
     depends_on:
       jellyfin:
         condition: service_started
       netdata:
         condition: service_started
-      vaultwarden:
+      vault:
         condition: service_started
-      uptime-kuma:
-        condition: service_started
+    ports:
+      - 80:80
+      - 443:443
     networks:
       - jellyfin-network
       - vault-network

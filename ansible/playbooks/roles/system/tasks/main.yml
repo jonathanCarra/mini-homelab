@@ -19,8 +19,31 @@
     state: present
   loop:
     - curl
+    - net-tools
 
 - name: Send utils directory
   ansible.builtin.copy:
     dest: /home/{{ ansible_user }}/
     src: ./utils/
+
+- name: Add hostname in local.conf
+  ansible.builtin.replace:
+    path: /home/{{ ansible_user }}/nginx/local.conf
+    regexp: 'HOST_ANSIBLE'
+    replace: '{{ ansible_host }}'
+
+- name: Add hostname in compose.yml
+  ansible.builtin.replace:
+    path: /home/{{ ansible_user }}/compose.yml
+    regexp: 'HOST_ANSIBLE'
+    replace: '{{ ansible_host }}'
+
+- name: Create cert directory
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/cert/"
+    state: directory
+    mode: '0755'
+
+- name: Generate Self-Signed SSL Certificate
+  ansible.builtin.shell:
+    cmd: openssl req -x509 -newkey rsa:4096 -keyout "/home/{{ ansible_user }}/cert/key.pem" -out "/home/{{ ansible_user }}/cert/cert.pem" -sha256 -days 36500 -nodes -subj "/C=XX/ST=France/L=Paris/O={{ ansible_user }}/OU={{ ansible_user }}/CN={{ ansible_domain }}"
