@@ -32,7 +32,6 @@ Editez le fichier `hosts.yml` en renseignant les informations suivantes :
 - adresse ip de votre machine serveur
 - utilisateur de connection (avec droits sudo)
 - l'emplacement de votre clé SSH sur votre machine locale.
-- adresse ip publique de votre box
 
 ## Lancement
 

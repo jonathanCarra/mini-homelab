@@ -67,14 +67,13 @@
       community.docker.docker_compose_v2:
         project_src: "/home/{{ ansible_user }}/"
         state: stopped
-      register: output
 
     - name: Kill process with needed port
       ansible.builtin.shell:
         cmd: "kill $(lsof -t -i:{{ item }})"
-        when: 'lsof -t -i:{{ item }} != ""'
       register: result
       changed_when: result.rc == 0
+      ignore_errors: true
       loop:
         - 80
         - 443
@@ -83,4 +82,3 @@
     - name: Create and start services
       community.docker.docker_compose_v2:
         project_src: "/home/{{ ansible_user }}/"
-      register: output

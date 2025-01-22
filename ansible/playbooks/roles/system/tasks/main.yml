@@ -29,11 +29,6 @@
     group: "{{ ansible_user }}"
     mode: '0644'
 
-- name: Change autorun permissions
-  ansible.builtin.file:
-    path: /home/{{ ansible_user }}/autorun.sh
-    mode: '0755'
-
 - name: Add hostname in local.conf
   ansible.builtin.replace:
     path: /home/{{ ansible_user }}/nginx/local.conf
@@ -50,7 +45,12 @@
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/cert/"
     state: directory
-    mode: '0755'
+    mode: '0644'
+
+- name: Create the private key
+  community.crypto.openssl_privatekey:
+    path: "/home/{{ ansible_user }}/cert/key.pem"
+    size: 4096
 
 - name: Generate a Self Signed OpenSSL certificate
   openssl_certificate:
