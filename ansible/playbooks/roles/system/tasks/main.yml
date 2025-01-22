@@ -25,6 +25,9 @@
   ansible.builtin.copy:
     dest: /home/{{ ansible_user }}/
     src: ./utils/
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
 
 - name: Change autorun permissions
   ansible.builtin.file:
@@ -49,6 +52,8 @@
     state: directory
     mode: '0755'
 
-- name: Generate Self-Signed SSL Certificate
-  ansible.builtin.shell:
-    cmd: openssl req -x509 -newkey rsa:4096 -keyout "/home/{{ ansible_user }}/cert/key.pem" -out "/home/{{ ansible_user }}/cert/cert.pem" -sha256 -days 36500 -nodes -subj "/C=XX/ST=France/L=Paris/O={{ ansible_user }}/OU={{ ansible_user }}/CN={{ ansible_domain }}"
+- name: Generate a Self Signed OpenSSL certificate
+  openssl_certificate:
+    path: "/home/{{ ansible_user }}/cert/cert.pem"
+    privatekey_path: "/home/{{ ansible_user }}/cert/key.pem"
+    provider: selfsigned

@@ -72,11 +72,13 @@
     - name: Kill process with needed port
       ansible.builtin.shell:
         cmd: "kill $(lsof -t -i:{{ item }})"
+        when: 'lsof -t -i:{{ item }} != ""'
+      register: result
+      changed_when: result.rc == 0
       loop:
         - 80
         - 443
         - 8080
-      ignore_errors: true
 
     - name: Create and start services
       community.docker.docker_compose_v2:
