@@ -63,10 +63,10 @@
         name: docker-compose
         state: present
 
-    - name: Stop all services
+    - name: Tear down existing services
       community.docker.docker_compose_v2:
         project_src: "/home/{{ ansible_user }}/"
-        state: stopped
+        state: absent
 
     - name: Kill process with needed port
       ansible.builtin.shell:
@@ -78,6 +78,10 @@
         - 80
         - 443
         - 8080
+        - 8920
+        - 8921
+        - 8922
+        - 19999
 
     - name: Create and start services
       community.docker.docker_compose_v2:

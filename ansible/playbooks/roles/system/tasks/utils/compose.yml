@@ -1,22 +1,58 @@
 services:
-  jellyfin:
+  jellyfin1:
     image: lscr.io/linuxserver/jellyfin:latest
-    container_name: jellyfin
+    container_name: jellyfin1
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
-      - JELLYFIN_PublishedServerUrl=http://192.168.1.138 # optional
     volumes:
       - ./Jellyfin/config:/config
       - ./Jellyfin/cache:/cache
       - ./Jellyfin/data:/data
-    # ports:
+    ports:
     #   - 8096:8096
-    #   - 8920:8920
+      - 8920:8920
     restart: unless-stopped
     networks:
       - jellyfin-network
+
+  jellyfin2:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin2
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./Jellyfin/config:/config
+      - ./Jellyfin/cache:/cache
+      - ./Jellyfin/data:/data
+    ports:
+    #   - 8096:8096
+      - 8921:8920
+    restart: unless-stopped
+    networks:
+      - jellyfin-network
+
+  jellyfin3:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin3
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./Jellyfin/config:/config
+      - ./Jellyfin/cache:/cache
+      - ./Jellyfin/data:/data
+    ports:
+    #   - 8096:8096
+      - 8922:8920
+    restart: unless-stopped
+    networks:
+      - jellyfin-network
+
 
   netdata:
     image: netdata/netdata
@@ -28,8 +64,8 @@ services:
       - SYS_ADMIN
     security_opt:
       - apparmor:unconfined
-    # ports:
-    #   - 19999:19999
+    ports:
+      - 19999:19999
     volumes:
       - netdataconfig:/etc/netdata
       - netdatalib:/var/lib/netdata
@@ -66,9 +102,14 @@ services:
     volumes:
       - ./nginx/local.conf:/etc/nginx/nginx.conf:ro
       - ./cert/:/etc/nginx/ssl/:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     restart: unless-stopped
     depends_on:
-      jellyfin:
+      jellyfin1:
+        condition: service_started
+      jellyfin2:
+        condition: service_started
+      jellyfin3:
         condition: service_started
       netdata:
         condition: service_started

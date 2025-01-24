@@ -20,6 +20,7 @@
   loop:
     - curl
     - net-tools
+    - nginx
 
 - name: Send utils directory
   ansible.builtin.copy:
@@ -29,17 +30,19 @@
     group: "{{ ansible_user }}"
     mode: '0644'
 
-- name: Add hostname in local.conf
-  ansible.builtin.replace:
-    path: /home/{{ ansible_user }}/nginx/local.conf
-    regexp: 'HOST_ANSIBLE'
-    replace: '{{ ansible_host }}'
-
 - name: Add hostname in compose.yml
   ansible.builtin.replace:
     path: /home/{{ ansible_user }}/compose.yml
     regexp: 'HOST_ANSIBLE'
     replace: '{{ ansible_host }}'
+  when: ansible_cert_domain is undefined
+
+- name: Add hostname in compose.yml
+  ansible.builtin.replace:
+    path: /home/{{ ansible_user }}/compose.yml
+    regexp: 'HOST_ANSIBLE'
+    replace: '{{ ansible_cert_domain }}'
+  when: ansible_cert_domain is defined
 
 - name: Create cert directory
   ansible.builtin.file:
@@ -47,13 +50,74 @@
     state: directory
     mode: '0644'
 
+# Création d'un certificat SSL autosigné si aucun domaine n'est fournis
 - name: Create the private key
   community.crypto.openssl_privatekey:
     path: "/home/{{ ansible_user }}/cert/key.pem"
     size: 4096
+  when: ansible_cert_domain is undefined
 
 - name: Generate a Self Signed OpenSSL certificate
   openssl_certificate:
     path: "/home/{{ ansible_user }}/cert/cert.pem"
     privatekey_path: "/home/{{ ansible_user }}/cert/key.pem"
     provider: selfsigned
+  when: ansible_cert_domain is undefined
+
+- name: Set files from without_domain
+  ansible.builtin.copy:
+    remote_src: true
+    src: /home/{{ ansible_user }}/nginx/local_WITHOUT_DOMAIN.conf
+    dest: /home/{{ ansible_user }}/nginx/local.conf
+  when: ansible_cert_domain is undefined
+
+- name: Install certbot
+  community.general.snap:
+    name: certbot
+    classic: true
+  when: ansible_cert_domain is defined
+
+- name: Prepare the Certbot command
+  ansible.builtin.file:
+    src: /snap/bin/certbot
+    dest: /usr/bin/certbot
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    state: link
+  when: ansible_cert_domain is defined
+
+- name: Get a certbot certificate
+  ansible.builtin.command: "certbot certonly --nginx --non-interactive --agree-tos -d {{ ansible_cert_domain }} -m {{ ansible_cert_email }}"
+  when: ansible_cert_domain is defined
+
+- name: Set files from with_domain
+  ansible.builtin.copy:
+    remote_src: true
+    src: /home/{{ ansible_user }}/nginx/local_WITH_DOMAIN.conf
+    dest: /home/{{ ansible_user }}/nginx/local.conf
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  when: ansible_cert_domain is defined
+
+- name: Add domain in local.conf
+  ansible.builtin.replace:
+    path: /home/{{ ansible_user }}/nginx/local.conf
+    regexp: ANSIBLE_DOMAIN
+    replace: '{{ ansible_cert_domain }}'
+  when: ansible_cert_domain is defined
+
+- name: Add hostname in local.conf
+  ansible.builtin.replace:
+    path: /home/{{ ansible_user }}/nginx/local.conf
+    regexp: 'HOST_ANSIBLE'
+    replace: '{{ ansible_host }}'
+
+- name: Remove file without_domain
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/nginx/local_WITHOUT_DOMAIN.conf
+    state: absent
+
+- name: Remove file with_domain
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/nginx/local_WITH_DOMAIN.conf
+    state: absent
