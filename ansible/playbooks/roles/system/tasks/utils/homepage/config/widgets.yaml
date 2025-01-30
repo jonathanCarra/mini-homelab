@@ -1,0 +1,17 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/info-widgets/
+
+- resources:
+    label: Système
+    cpu: true
+    memory: true
+
+- resources:
+    label: Stockage
+    expanded: true
+    disk: /
+
+- search:
+    provider: google
+    target: _blank

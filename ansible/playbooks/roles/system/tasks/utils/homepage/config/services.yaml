@@ -1,0 +1,23 @@
+- Applications:
+    - Jellyfin:
+        href: /jellyfin
+        target: _self
+        description: Bibliothèque Multimédia
+        icon: /images/jellyfin.png
+    - VaultWarden:
+        href: /vault
+        target: _self
+        description: Gestionnaire de mots de passe
+        icon: /images/vaultwarden.png
+    - FileBrowser:
+        href: /filebrowser
+        target: _self
+        description: Partage de fichiers
+        icon: /images/filebrowser.png
+
+- Monitoring:
+    - Netdata:
+        href: /netdata
+        target: _self
+        description: Supervision du serveur
+        icon: /images/netdata.png

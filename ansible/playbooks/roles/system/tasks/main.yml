@@ -24,51 +24,95 @@
 
 - name: Send utils directory
   ansible.builtin.copy:
-    dest: /home/{{ ansible_user }}/
+    dest: /srv/utils/
     src: ./utils/
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0644'
+  register: send
+
+- name: Copy utils directory
+  ansible.builtin.copy:
+    remote_src: true
+    dest: /srv/current/
+    src: /srv/utils/
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  when: send.changed
 
 - name: Add hostname in compose.yml
   ansible.builtin.replace:
-    path: /home/{{ ansible_user }}/compose.yml
+    path: /srv/current/compose.yml
     regexp: 'HOST_ANSIBLE'
     replace: '{{ ansible_host }}'
-  when: ansible_cert_domain is undefined
+  when:
+    - ansible_cert_domain is undefined
+    - send.changed
 
 - name: Add hostname in compose.yml
   ansible.builtin.replace:
-    path: /home/{{ ansible_user }}/compose.yml
+    path: /srv/current/compose.yml
     regexp: 'HOST_ANSIBLE'
     replace: '{{ ansible_cert_domain }}'
+  when:
+    - ansible_cert_domain is defined
+    - send.changed
+
+- name: Set local.conf from without_domain
+  ansible.builtin.copy:
+    remote_src: true
+    src: /srv/current/nginx/local_WITHOUT_DOMAIN.conf
+    dest: /srv/current/nginx/local.conf
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  when: ansible_cert_domain is undefined
+
+- name: Set files from with_domain
+  ansible.builtin.copy:
+    remote_src: true
+    src: /srv/current/nginx/local_WITH_DOMAIN.conf
+    dest: /srv/current/nginx/local.conf
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
   when: ansible_cert_domain is defined
+
+- name: Add domain in local.conf
+  ansible.builtin.replace:
+    path: /srv/current/nginx/local.conf
+    regexp: ANSIBLE_DOMAIN
+    replace: '{{ ansible_cert_domain }}'
+  when:
+    - ansible_cert_domain is defined
+    - send.changed
+
+- name: Add hostname in local.conf
+  ansible.builtin.replace:
+    path: /srv/current/nginx/local.conf
+    regexp: 'HOST_ANSIBLE'
+    replace: '{{ ansible_host }}'
+  when: send.changed
 
 - name: Create cert directory
   ansible.builtin.file:
-    path: "/home/{{ ansible_user }}/cert/"
+    path: "/srv/cert/"
     state: directory
     mode: '0644'
 
 # Création d'un certificat SSL autosigné si aucun domaine n'est fournis
 - name: Create the private key
   community.crypto.openssl_privatekey:
-    path: "/home/{{ ansible_user }}/cert/key.pem"
+    path: "/srv/cert/key.pem"
     size: 4096
   when: ansible_cert_domain is undefined
 
 - name: Generate a Self Signed OpenSSL certificate
   openssl_certificate:
-    path: "/home/{{ ansible_user }}/cert/cert.pem"
-    privatekey_path: "/home/{{ ansible_user }}/cert/key.pem"
+    path: "/srv/cert/cert.pem"
+    privatekey_path: "/srv/cert/key.pem"
     provider: selfsigned
-  when: ansible_cert_domain is undefined
-
-- name: Set files from without_domain
-  ansible.builtin.copy:
-    remote_src: true
-    src: /home/{{ ansible_user }}/nginx/local_WITHOUT_DOMAIN.conf
-    dest: /home/{{ ansible_user }}/nginx/local.conf
   when: ansible_cert_domain is undefined
 
 - name: Install certbot
@@ -90,34 +134,10 @@
   ansible.builtin.command: "certbot certonly --nginx --non-interactive --agree-tos -d {{ ansible_cert_domain }} -m {{ ansible_cert_email }}"
   when: ansible_cert_domain is defined
 
-- name: Set files from with_domain
-  ansible.builtin.copy:
-    remote_src: true
-    src: /home/{{ ansible_user }}/nginx/local_WITH_DOMAIN.conf
-    dest: /home/{{ ansible_user }}/nginx/local.conf
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-  when: ansible_cert_domain is defined
-
-- name: Add domain in local.conf
-  ansible.builtin.replace:
-    path: /home/{{ ansible_user }}/nginx/local.conf
-    regexp: ANSIBLE_DOMAIN
-    replace: '{{ ansible_cert_domain }}'
-  when: ansible_cert_domain is defined
-
-- name: Add hostname in local.conf
-  ansible.builtin.replace:
-    path: /home/{{ ansible_user }}/nginx/local.conf
-    regexp: 'HOST_ANSIBLE'
-    replace: '{{ ansible_host }}'
-
-- name: Remove file without_domain
-  ansible.builtin.file:
-    path: /home/{{ ansible_user }}/nginx/local_WITHOUT_DOMAIN.conf
+- name: Remove unused dependencies
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item }}"
     state: absent
-
-- name: Remove file with_domain
-  ansible.builtin.file:
-    path: /home/{{ ansible_user }}/nginx/local_WITH_DOMAIN.conf
-    state: absent
+  loop:
+    - nginx

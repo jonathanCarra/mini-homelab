@@ -1,58 +1,22 @@
 services:
-  jellyfin1:
-    image: lscr.io/linuxserver/jellyfin:latest
-    container_name: jellyfin1
+  jellyfin:
+    image: jellyfin/jellyfin
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - JELLYFIN_PublishedServerUrl=http://HOST_ANSIBLE/jellyfin
     volumes:
-      - ./Jellyfin/config:/config
-      - ./Jellyfin/cache:/cache
-      - ./Jellyfin/data:/data
+      - /srv/Jellyfin/config:/config
+      - /srv/Jellyfin/cache:/cache
+      - /srv/Jellyfin/data:/data
+      - /srv/Jellyfin/media:/media
+      - /srv/Jellyfin/media2:/media2:ro
     ports:
-    #   - 8096:8096
-      - 8920:8920
+      - 8096:8096
     restart: unless-stopped
     networks:
       - jellyfin-network
-
-  jellyfin2:
-    image: lscr.io/linuxserver/jellyfin:latest
-    container_name: jellyfin2
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-    volumes:
-      - ./Jellyfin/config:/config
-      - ./Jellyfin/cache:/cache
-      - ./Jellyfin/data:/data
-    ports:
-    #   - 8096:8096
-      - 8921:8920
-    restart: unless-stopped
-    networks:
-      - jellyfin-network
-
-  jellyfin3:
-    image: lscr.io/linuxserver/jellyfin:latest
-    container_name: jellyfin3
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-    volumes:
-      - ./Jellyfin/config:/config
-      - ./Jellyfin/cache:/cache
-      - ./Jellyfin/data:/data
-    ports:
-    #   - 8096:8096
-      - 8922:8920
-    restart: unless-stopped
-    networks:
-      - jellyfin-network
-
 
   netdata:
     image: netdata/netdata
@@ -62,10 +26,8 @@ services:
     cap_add:
       - SYS_PTRACE
       - SYS_ADMIN
-    security_opt:
-      - apparmor:unconfined
-    ports:
-      - 19999:19999
+    # ports:
+    #   - 19999:19999
     volumes:
       - netdataconfig:/etc/netdata
       - netdatalib:/var/lib/netdata
@@ -80,6 +42,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - jellyfin-network
+      - vault-network
+      - filebrowser-network
 
   vault:
     image: vaultwarden/server:latest
@@ -87,33 +51,64 @@ services:
     restart: unless-stopped
     environment:
       DOMAIN: "https://HOST_ANSIBLE/vault/"
-      # DOMAIN: "https://vaultwarden.example.com"  # required when using a reverse proxy; your domain; vaultwarden needs to know it's https to work properly with attachments
       SIGNUPS_ALLOWED: "true"
     volumes:
-      - ./vw-data/:/data/
-    ports:
-      - 8080:80
+      - /srv/vw-data/:/data/
+    # ports:
+    #   - 8080:80
     networks:
       - vault-network
+
+  filebrowser:
+    image: filebrowser/filebrowser:s6
+    container_name: filebrowser
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /srv/filebrowser/srv:/srv
+      - /srv/filebrowser/database:/database
+      - /srv/filebrowser/config:/config
+    # ports:
+    #   - 8080:80
+    restart: unless-stopped
+    networks:
+      - filebrowser-network
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    environment:
+      PUID: 1000 # optional, your user id
+      PGID: 1000 # optional, your group id
+    volumes:
+      - /srv/current/homepage/config:/app/config # Make sure your local config directory exists
+      - /var/run/docker.sock:/var/run/docker.sock:ro # optional, for docker int>
+      - /srv/current/homepage/images:/app/public/images
+    restart: unless-stopped
+    scale: 5
+    # ports:
+    #   - 3000:3000
+    networks:
+      - homepage-network
 
   nginx:
     image: nginx
     container_name: nginx
     volumes:
-      - ./nginx/local.conf:/etc/nginx/nginx.conf:ro
-      - ./cert/:/etc/nginx/ssl/:ro
+      - /srv/current/nginx/local.conf:/etc/nginx/nginx.conf:ro
+      - /srv/cert/:/etc/nginx/ssl/:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     restart: unless-stopped
     depends_on:
-      jellyfin1:
-        condition: service_started
-      jellyfin2:
-        condition: service_started
-      jellyfin3:
+      jellyfin:
         condition: service_started
       netdata:
         condition: service_started
       vault:
+        condition: service_started
+      filebrowser:
+        condition: service_started
+      homepage:
         condition: service_started
     ports:
       - 80:80
@@ -121,6 +116,8 @@ services:
     networks:
       - jellyfin-network
       - vault-network
+      - filebrowser-network
+      - homepage-network
 
 volumes:
   netdataconfig:
@@ -129,3 +126,5 @@ volumes:
 networks:
   jellyfin-network:
   vault-network:
+  filebrowser-network:
+  homepage-network:

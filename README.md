@@ -76,7 +76,7 @@ netstat -ntlp
 ```
 
 > [!NOTE]  
-> En cas de bon fonctionnement des containers, les ports `80`, `443`, `8080`, `8920` et `19999` devraient être ouvert.
+> En cas de bon fonctionnement des containers, les ports `80`, `443` devraient être ouvert.
 
 > [!WARNING]  
 > Si les ports sont utilisé, mais que les containers ne sont pas actif, vous pouvez forcer la fermeture d'un port via la commande `sudo kill $(sudo lsof -t -i:<PORT>)`

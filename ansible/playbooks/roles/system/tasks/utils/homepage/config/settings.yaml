@@ -1,0 +1,24 @@
+title: The Nest
+description: Bienvenue dans le nids ! Ici, vous trouverez de nombreuses applications intéressantes et utile, accessible depuis n'importe où !
+background:
+  image: /images/background.png
+  blur: sm # sm, "", md, xl... see https://tailwindcss.com/docs/backdrop-blur
+  saturate: 50 # 0, 50, 100... see https://tailwindcss.com/docs/backdrop-saturate
+  brightness: 50 # 0, 50, 75... see https://tailwindcss.com/docs/backdrop-brightness
+  opacity: 50 # 0-100
+favicon: /images/logo.png
+theme: dark
+language: fr
+headerStyle: underlined
+logpath: /tmp/homepage
+quicklaunch:
+  searchDescriptions: false
+  hideInternetSearch: true
+hideErrors: true
+layout:
+  Applications:
+    style: row
+    columns: 4
+  Monitoring:
+    style: row
+    columns: 4
