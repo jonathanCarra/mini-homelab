@@ -1,0 +1,9 @@
+---
+servers:
+  hosts:
+    docker-standalone:
+      ansible_host: 192.168.1.1 # l'ip de votre serveur ubuntu 24.04
+      ansible_user: example # Remplacez par votre utilisateur sudo
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa # chemin de votre clé sur la machine local
+      # ansible_cert_domain: example.com # Domaine à utiliser pour votre serveur (facultatif)
+      # ansible_cert_email: email@example.com # Email à utiliser pour le certificat Certbot (Uniquement si vous avez un domain)
