@@ -7,13 +7,13 @@ services:
       - TZ=Etc/UTC
       - JELLYFIN_PublishedServerUrl=http://HOST_ANSIBLE/jellyfin
     volumes:
-      - /srv/Jellyfin/config:/config
-      - /srv/Jellyfin/cache:/cache
-      - /srv/Jellyfin/data:/data
-      - /srv/Jellyfin/media:/media
-      - /srv/Jellyfin/media2:/media2:ro
-    ports:
-      - 8096:8096
+      - /srv/data/Jellyfin/config:/config
+      - /srv/data/Jellyfin/cache:/cache
+      - /srv/data/Jellyfin/data:/data
+      - /srv/data/Jellyfin/media:/media
+      - /srv/data/Jellyfin/media2:/media2:ro
+    # ports:
+    #   - 8096:8096
     restart: unless-stopped
     networks:
       - jellyfin-network
@@ -53,7 +53,7 @@ services:
       DOMAIN: "https://HOST_ANSIBLE/vault/"
       SIGNUPS_ALLOWED: "true"
     volumes:
-      - /srv/vw-data/:/data/
+      - /srv/data/vw-data/:/data/
     # ports:
     #   - 8080:80
     networks:
@@ -66,9 +66,9 @@ services:
       - PUID=1000
       - PGID=1000
     volumes:
-      - /srv/filebrowser/srv:/srv
-      - /srv/filebrowser/database:/database
-      - /srv/filebrowser/config:/config
+      - /srv/data/filebrowser/srv:/srv
+      - /srv/data/filebrowser/database:/database
+      - /srv/data/filebrowser/config:/config
     # ports:
     #   - 8080:80
     restart: unless-stopped
