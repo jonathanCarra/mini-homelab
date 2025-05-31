@@ -7,4 +7,7 @@
       aarch64: arm64
   roles:
     - system
-    - docker_install
+    # - docker_install
+    # - homelab_install
+    # - certbot
+    # - homelab_launch

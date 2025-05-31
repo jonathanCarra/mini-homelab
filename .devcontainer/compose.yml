@@ -1,0 +1,15 @@
+services:
+  devcontainer:
+    image: devcontainer
+    build:
+      context: .
+      dockerfile: Dockerfile
+    privileged: true
+    environment:
+      ANSIBLE_CONFIG: ./ansible.cfg
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+    volumes: 
+      - /sys/fs/cgroup:/sys/fs/cgroup
+      - ../:/workspaces
+      - ~/.ssh:/root/.ssh

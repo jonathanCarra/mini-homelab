@@ -1,0 +1,86 @@
+---
+- name: Start services
+  community.docker.docker_compose_v2:
+    project_src: /srv/config/
+
+- name: Startup Jellyfin
+  ansible.builtin.shell: |
+    until grep 'Startup complete' <(docker compose --project-directory /srv/config logs jellyfin)
+    do
+      sleep 2
+    done
+
+    curl "http://localhost:8096/Startup/Configuration" -H 'Content-Type: application/json' \
+      --data-raw '{"UICulture":"fr","MetadataCountryCode":"FR","PreferredMetadataLanguage":"fr"}'
+    curl "http://localhost:8096/Startup/User"
+    curl "http://localhost:8096/Startup/User" -H 'Content-Type: application/json' \
+      --data-raw '{"Name":"{{ ansible_admin_user }}","Password":"{{ ansible_admin_password }}"}'
+    curl "http://localhost:8096/Library/VirtualFolders?collectionType=movies&refreshLibrary=false&name=Movies" -H 'Content-Type: application/json' \
+      --data-raw '{ \
+        "LibraryOptions":{ \
+          "EnableArchiveMediaFiles":false, \
+          "EnablePhotos":true, \
+          "EnableRealtimeMonitor":true, \
+          "ExtractChapterImagesDuringLibraryScan":false, \
+          "EnableChapterImageExtraction":false, \
+          "DownloadImagesInAdvance":false, \
+          "EnableInternetProviders":true, \
+          "ImportMissingEpisodes":false, \
+          "SaveLocalMetadata":false, \
+          "EnableAutomaticSeriesGrouping":false, \
+          "PreferredMetadataLanguage":"fr", \
+          "MetadataCountryCode":"fr", \
+          "SeasonZeroDisplayName":"Specials", \
+          "AutomaticRefreshIntervalDays":30, \
+          "EnableEmbeddedTitles":false, \
+          "EnableEmbeddedEpisodeInfos":false, \
+          "SkipSubtitlesIfEmbeddedSubtitlesPresent":false, \
+          "SkipSubtitlesIfAudioTrackMatches":false, \
+          "SaveSubtitlesWithMedia":true, \
+          "RequirePerfectSubtitleMatch":true, \
+          "MetadataSavers":[], \
+          "TypeOptions":[{ \
+            "Type":"Movie","MetadataFetchers":["TheMovieDb","The Open Movie Database"], \
+            "MetadataFetcherOrder":["TheMovieDb","The Open Movie Database"], \
+            "ImageFetchers":["TheMovieDb","The Open Movie Database","Screen Grabber"], \
+            "ImageFetcherOrder":["TheMovieDb","The Open Movie Database","Screen Grabber"]}], \
+          "LocalMetadataReaderOrder":["Nfo"], \
+          "SubtitleDownloadLanguages":[], \
+          "DisabledSubtitleFetchers":[], \
+          "SubtitleFetcherOrder":[], \
+          "PathInfos":[{"Path":"/media"}]}}'
+    curl "http://localhost:8096/Startup/Configuration" -H 'Content-Type: application/json' \
+      --data-raw '{"UICulture":"fr","MetadataCountryCode":"FR","PreferredMetadataLanguage":"fr"}'
+    curl "http://localhost:8096/Startup/RemoteAccess" -H 'Content-Type: application/json' \
+      --data-raw '{"EnableRemoteAccess":true,"EnableAutomaticPortMapping":false}'
+    curl "http://localhost:8096/Startup/Complete" -X 'POST'
+
+    until grep 'Analyser la médiathèque Completed' <(docker compose --project-directory /srv/config logs jellyfin)
+    do
+      sleep 2
+    done
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Change Base URL for Jellyfin
+  ansible.builtin.replace:
+    path: /srv/Jellyfin/config/config/network.xml
+    regexp: '<BaseUrl */>'
+    replace: '<BaseUrl>/jellyfin</BaseUrl>'
+
+- name: Change Base URL for FileBrowser
+  ansible.builtin.replace:
+    path: /srv/filebrowser/config/settings.json
+    regexp: 'baseURL.*$'
+    replace: 'baseURL": "/filebrowser",'
+
+- name: Stop services
+  community.docker.docker_compose_v2:
+    project_src: /srv/config/
+    state: absent
+
+- name: Restart nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted

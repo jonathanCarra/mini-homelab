@@ -1,0 +1,12 @@
+services:
+  nginx:
+    image: nginx
+    container_name: nginx
+    # volumes:
+    #   - /srv/config/local.conf:/etc/nginx/nginx.conf:ro
+    #   - /srv/cert/:/etc/nginx/ssl/:ro
+    #   - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: unless-stopped
+    ports:
+      - 8080:80
+      - 8443:443

@@ -1,0 +1,267 @@
+---
+- name: Send homelab directory
+  ansible.builtin.copy:
+    dest: /srv/
+    src: /workspaces/homelab
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  register: send
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: "/srv/config/"
+    state: directory
+    mode: '0644'
+
+- name: Send compose file
+  ansible.builtin.copy:
+    dest: /srv/config/compose.yml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+    content: |
+      services:
+        jellyfin:
+          container_name: jellyfin
+          image: jellyfin/jellyfin
+          environment:
+            - PUID=1000
+            - PGID=1000
+            - TZ=Etc/UTC
+            - JELLYFIN_PublishedServerUrl=http://{{ ansible_cert_domain }}/jellyfin
+          volumes:
+            - /srv/Jellyfin/config:/config
+            - /srv/Jellyfin/cache:/cache
+            - /srv/Jellyfin/data:/data
+            - /media:/media:ro
+          ports:
+            - 8096:8096
+          restart: unless-stopped
+          networks:
+            - jellyfin-network
+
+        netdata:
+          image: netdata/netdata
+          container_name: netdata
+          pid: host
+          restart: unless-stopped
+          cap_add:
+            - SYS_PTRACE
+            - SYS_ADMIN
+          # ports:
+          #   - 19999:19999
+          volumes:
+            - netdataconfig:/etc/netdata
+            - netdatalib:/var/lib/netdata
+            - netdatacache:/var/cache/netdata
+            - /etc/passwd:/host/etc/passwd:ro
+            - /etc/group:/host/etc/group:ro
+            - /etc/localtime:/etc/localtime:ro
+            - /proc:/host/proc:ro
+            - /sys:/host/sys:ro
+            - /etc/os-release:/host/etc/os-release:ro
+            - /var/log:/host/var/log:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+          networks:
+            - jellyfin-network
+            - vault-network
+            - filebrowser-network
+
+        vault:
+          image: vaultwarden/server:latest
+          container_name: vaultwarden
+          restart: unless-stopped
+          environment:
+            DOMAIN: "https://{{ ansible_cert_domain }}/vault/"
+            SIGNUPS_ALLOWED: "true"
+          volumes:
+            - /srv/data/vw-data/:/data/
+          # ports:
+          #   - 8080:80
+          networks:
+            - vault-network
+
+        filebrowser:
+          image: filebrowser/filebrowser:s6
+          container_name: filebrowser
+          environment:
+            - PUID=1000
+            - PGID=1000
+          volumes:
+            - /srv/filebrowser/srv:/srv
+            - /srv/filebrowser/database:/database
+            - /srv/filebrowser/config:/config
+          # ports:
+          #   - 8080:80
+          restart: unless-stopped
+          networks:
+            - filebrowser-network
+
+        homepage:
+          image: ghcr.io/gethomepage/homepage:latest
+          environment:
+            HOMEPAGE_ALLOWED_HOSTS: {{ ansible_cert_domain }}
+          volumes:
+            - /srv/homelab/homepage/config:/app/config
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - /srv/homelab/homepage/images:/app/public/images
+          restart: unless-stopped
+          scale: 5
+          # ports:
+          #   - 3000:3000
+          networks:
+            - homepage-network
+
+        nginx:
+          image: nginx
+          container_name: nginx
+          volumes:
+            - /srv/config/local.conf:/etc/nginx/nginx.conf:ro
+          restart: unless-stopped
+          depends_on:
+            jellyfin:
+              condition: service_started
+            netdata:
+              condition: service_started
+            vault:
+              condition: service_started
+            filebrowser:
+              condition: service_started
+            homepage:
+              condition: service_started
+          ports:
+            - 8080:80
+          networks:
+            - jellyfin-network
+            - vault-network
+            - filebrowser-network
+            - homepage-network
+
+      volumes:
+        netdataconfig:
+        netdatalib:
+        netdatacache:
+      networks:
+        jellyfin-network:
+        vault-network:
+        filebrowser-network:
+        homepage-network:
+
+- name: Send docker nginx config
+  ansible.builtin.copy:
+    dest: /srv/config/local.conf
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+    content: |
+      events {
+          worker_connections 1024;  # Nombre maximal de connexions simultanées par worker
+      }
+
+      http {
+          upstream vaultwarden-default {
+              zone vaultwarden-default 64k;
+              server vault:80;
+              keepalive 2;
+          }
+
+          upstream jellyfin-default {
+              zone jellyfin-default 64k;
+              server jellyfin:8920;
+              server jellyfin:8096;
+              keepalive 2;
+          }
+
+          upstream netdata-default {
+              zone netdata-default 64k;
+              server netdata:19999;
+              keepalive 2;
+          }
+
+          upstream filebrowser-default {
+              zone filebrowser-default 64k;
+              server filebrowser:80;
+              keepalive 2;
+          }
+
+          upstream homepage-default {
+              ip_hash;
+              zone homepage-default 64k;
+              server homepage:3000;
+              keepalive 2;
+          }
+
+          map $http_upgrade $connection_upgrade {
+              default upgrade;
+              ''      "";
+          }
+
+          server {
+              listen 80;
+              listen [::]:80;
+
+              server_name {{ ansible_cert_domain }} www.{{ ansible_cert_domain }};
+              server_tokens off;
+
+              location / {
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection $connection_upgrade;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_pass http://homepage-default;
+              }
+
+              location /jellyfin/ {
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection $connection_upgrade;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_pass http://jellyfin-default;
+              }
+
+              location /filebrowser/ {
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection $connection_upgrade;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_pass http://filebrowser-default;
+              }
+
+              location /netdata/ {
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection $connection_upgrade;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_pass http://netdata-default;
+              }
+
+              location /vault/ {
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection $connection_upgrade;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_pass http://vaultwarden-default;
+              }
+          }
+      }

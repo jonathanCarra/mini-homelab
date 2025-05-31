@@ -3,15 +3,18 @@
 {
 	"name": "Ubuntu",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:jammy",
-	"features": {
-		"ghcr.io/hspaans/devcontainer-features/ansible-lint:1": {},
-		"ghcr.io/devcontainers-extra/features/ansible:2": {}
-	},
+	// "image": "mcr.microsoft.com/devcontainers/base:noble",
+	"dockerComposeFile": "./compose.yml",
+	"service": "devcontainer",
+	"workspaceFolder": "/workspaces",
+	"shutdownAction": "stopCompose",
+	
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"redhat.ansible"
+				"HashiCorp.terraform",
+				"redhat.ansible",
+				"ms-azuretools.vscode-docker"
 			]
 		}
 	}
@@ -23,7 +26,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
+	// "postCreateCommand": "",
 
 	// Configure tool-specific properties.
 	// "customizations": {},

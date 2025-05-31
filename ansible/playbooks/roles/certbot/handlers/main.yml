@@ -1,0 +1,3 @@
+---
+- name: Get a certbot certificate
+  ansible.builtin.command: "certbot certonly --nginx --non-interactive --agree-tos -d {{ ansible_cert_domain }} -m {{ ansible_cert_email }}"

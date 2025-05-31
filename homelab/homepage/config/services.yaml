@@ -4,16 +4,22 @@
         target: _self
         description: Bibliothèque Multimédia
         icon: /images/jellyfin.png
+        server: my-docker
+        container: jellyfin
     - VaultWarden:
         href: /vault
         target: _self
         description: Gestionnaire de mots de passe
         icon: /images/vaultwarden.png
+        server: my-docker
+        container: vaultwarden
     - FileBrowser:
         href: /filebrowser
         target: _self
         description: Partage de fichiers
         icon: /images/filebrowser.png
+        server: my-docker
+        container: filebrowser
 
 - Monitoring:
     - Netdata:
@@ -21,3 +27,5 @@
         target: _self
         description: Supervision du serveur
         icon: /images/netdata.png
+        server: my-docker
+        container: netdata

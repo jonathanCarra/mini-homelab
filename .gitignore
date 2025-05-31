@@ -1,2 +1,5 @@
 .vscode
 hosts.yml
+.terraform/
+.terraform*
+terraform.*
